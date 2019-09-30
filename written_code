@@ -1,0 +1,73 @@
+# NLP Model for Restaurant Reviews Sentiment Analysis
+
+# Importing the libraries
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Importing the dataset (1000 reviews)
+# Use the tsv (tab) dataset instead of csv (comma) dataset because commas in the text could be confused for commas that are used as separators 
+# Thus prepare text data with tab separators
+# ignore double quotes with value 3  
+dataset = pd.read_csv('Restaurant_Reviews.tsv', delimiter = '\t', quoting = 3)
+
+# Cleaning the texts
+# Taking only the relevant words (not stop words), do stemming (taking different versions of the same word)
+# Then, we move into the tokenization process of relevant words
+import re 
+import nltk
+# Need list of stop words  
+nltk.download('stopwords')
+# Import stop words list 
+# Keeping all the lowercase and uppercase letters 
+# Putting all of the letters in lowercase
+# Remove stop words or non-relevant words 
+# Make a for loop for reviews, see if the word is present in English stop words list 
+# If you have articles or books, way better to use the set function so algo can execute faster
+# Stemming to only keep the roots of the words -- done to avoid sparsity 
+# Join the separated relevant words 
+from nltk.corpus import stopwords 
+from nltk.stem.porter import PorterStemmer 
+corpus = []
+for i in range(0,1000):
+    review = re.sub('[^a-zA-Z]', ' ', dataset['Review'][i])
+    review = review.lower()
+    review = review.split()
+    ps = PorterStemmer()
+    review = [ps.stem(word) for word in review if not word in set(stopwords.words('english'))]
+    review = ' '.join(review)
+    corpus.append(review)
+    
+# Creating the Bag of Words model 
+# Creating a sparse matrix through the process of tokenization to reduce the total number of words by creating 1 column for each of the words 
+# To predict if a review is positive or negative, we need to train our model on all the reviews (because we have the real results of whether these reviews are positive or negative)
+# Use the count vectorizor class and create the object cv, add max_features to keep the 1500 most frequent words and get rid of irrelevant ones 
+# 1 = positive review, 0 = negative review; 0 = if word doesn't appear in review & 1 = if word appears in review
+# can reduce sparcity by a) reducing max_features # of words from 1500 or b) dimensionality reduction 
+from sklearn.feature_extraction.text import CountVectorizer 
+cv = CountVectorizer(max_features = 1500) 
+X = cv.fit_transform(corpus).toarray()
+y = dataset.iloc[:, 1].values
+
+# Splitting the dataset into the Training set and Test set
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.20, random_state = 0)
+
+# Fitting Naive Bayes to the Training set
+from sklearn.naive_bayes import GaussianNB
+classifier = GaussianNB()
+classifier.fit(X_train, y_train)
+
+# Predicting the Test set results
+y_pred = classifier.predict(X_test)
+
+# Making the Confusion Matrix (cm)
+from sklearn.metrics import confusion_matrix
+cm = confusion_matrix(y_test, y_pred)
+
+# cm table interpretation (200 test set sample)
+# 55 correct predictions of negative reviews and 91 correct predictions of positive reviews
+# 12 incorrect predicitions of negative reviews and 42 incorrect predicitions of positive reviews 
+# 146/200 correct predicitons & 54/200 incorrect predictions
+(55+91)/200
+# 73% accuracy is not bad for 1000 reviews 
